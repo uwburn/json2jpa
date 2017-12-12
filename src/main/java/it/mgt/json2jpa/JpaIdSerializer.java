@@ -23,7 +23,7 @@ public class JpaIdSerializer extends JsonSerializer<Object> {
             serializeEntity(o, jsonGenerator, serializerProvider);
     }
 
-    private void serializeEntityCollection(Collection<?> collection, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) {
+    protected void serializeEntityCollection(Collection<?> collection, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) {
         try {
             jsonGenerator.writeStartArray();
 
@@ -34,7 +34,7 @@ public class JpaIdSerializer extends JsonSerializer<Object> {
         } catch (IOException ignored) { }
     }
 
-    private void serializeEntity(Object entity, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) {
+    protected void serializeEntity(Object entity, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) {
         Field idField = JpaUtils.getIdField(entity.getClass());
         idField.setAccessible(true);
 
