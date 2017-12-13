@@ -208,7 +208,7 @@ public class Json2Jpa {
 
             Constructor<T> ctor = clazz.getConstructor();
             T jpaObject = ctor.newInstance();
-            json2JpaEntity.merge(jpaObject, json);
+            merge(json2JpaEntity, jpaObject, json);
 
             flushRemoved();
 
