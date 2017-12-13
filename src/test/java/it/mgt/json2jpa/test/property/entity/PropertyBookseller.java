@@ -1,5 +1,10 @@
 package it.mgt.json2jpa.test.property.entity;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import it.mgt.json2jpa.JpaIdSerializer;
+import it.mgt.json2jpa.test.view.Skip;
+
 import javax.persistence.*;
 
 @Entity
@@ -60,6 +65,8 @@ public class PropertyBookseller {
     }
 
     @OneToOne(mappedBy = "director")
+    @JsonSerialize(using = JpaIdSerializer.class)
+    @JsonView(Skip.class)
     public PropertyBookstore getDirectedBookstore() {
         return directedBookstore;
     }
@@ -69,6 +76,8 @@ public class PropertyBookseller {
     }
 
     @ManyToOne
+    @JsonSerialize(using = JpaIdSerializer.class)
+    @JsonView(Skip.class)
     public PropertyBookstore getEmployingBookstore() {
         return employingBookstore;
     }

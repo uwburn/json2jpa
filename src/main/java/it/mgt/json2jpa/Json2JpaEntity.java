@@ -128,7 +128,7 @@ class Json2JpaEntity {
 
                 if (this.j2j.pushPathIfAllowed(property.name)) {
                     if (this.j2j.matchesViews(property.views))
-                        if (!property.ignore)
+                        if (!property.ignore || this.j2j.discardIgnore)
                             property.merge(jpaObject, jsonField.getValue());
 
                     this.j2j.popPath();

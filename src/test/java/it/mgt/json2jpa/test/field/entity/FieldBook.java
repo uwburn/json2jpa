@@ -1,5 +1,8 @@
 package it.mgt.json2jpa.test.field.entity;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import it.mgt.json2jpa.test.view.Skip;
+
 import javax.persistence.*;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -20,6 +23,8 @@ public class FieldBook {
     private String isbn;
     private double price;
     @ManyToMany
+    @OrderBy("id ASC")
+    @JsonView(Skip.class)
     private Set<FieldBookstore> bookstores = new LinkedHashSet<>();
 
 

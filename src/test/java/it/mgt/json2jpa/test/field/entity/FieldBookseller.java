@@ -1,5 +1,10 @@
 package it.mgt.json2jpa.test.field.entity;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import it.mgt.json2jpa.JpaIdSerializer;
+import it.mgt.json2jpa.test.view.Skip;
+
 import javax.persistence.*;
 
 @Entity
@@ -17,8 +22,12 @@ public class FieldBookseller {
     private String firstName;
     private String lastName;
     @OneToOne(mappedBy = "director")
+    @JsonSerialize(using = JpaIdSerializer.class)
+    @JsonView(Skip.class)
     private FieldBookstore directedBookstore;
     @ManyToOne
+    @JsonSerialize(using = JpaIdSerializer.class)
+    @JsonView(Skip.class)
     private FieldBookstore employingBookstore;
 
 

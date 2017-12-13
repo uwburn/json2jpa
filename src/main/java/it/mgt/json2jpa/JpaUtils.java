@@ -2,6 +2,7 @@ package it.mgt.json2jpa;
 
 import javax.persistence.Id;
 import java.beans.BeanInfo;
+import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -98,6 +99,44 @@ class JpaUtils {
         }
 
         return null;
+    }
+
+    static Object getId(Object entity) {
+        Class<?> clazz = entity.getClass();
+
+        BeanInfo beanInfo;
+        try {
+            beanInfo = Introspector.getBeanInfo(clazz);
+            for (PropertyDescriptor pd : beanInfo.getPropertyDescriptors())
+                if (pd.getReadMethod() != null)
+                    if (pd.getReadMethod().getAnnotation(Id.class) != null)
+                        return pd.getReadMethod().invoke(entity);
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Could not retrieve id from getter", e);
+        }
+
+        Field idField = getIdField(clazz);
+        if (idField == null)
+            throw new RuntimeException("No @Id found on getters or fields");
+
+        try {
+            PropertyDescriptor idPropertyDescriptor = getPropertyDescriptor(idField, beanInfo);
+            if (idPropertyDescriptor != null)
+                return idPropertyDescriptor.getReadMethod().invoke(entity);
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Could not retrieve id from getter", e);
+        }
+
+        try {
+            idField.setAccessible(true);
+            return idField.get(entity);
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Could not retrieve id from field", e);
+        }
+
     }
 
 }

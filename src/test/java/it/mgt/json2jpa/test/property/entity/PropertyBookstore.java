@@ -1,6 +1,10 @@
 package it.mgt.json2jpa.test.property.entity;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import it.mgt.json2jpa.JpaIdSerializer;
 import it.mgt.json2jpa.RemoveOnOrphans;
+import it.mgt.json2jpa.test.view.Skip;
 
 import javax.persistence.*;
 import java.util.LinkedHashSet;
@@ -64,6 +68,7 @@ public class PropertyBookstore {
     }
 
     @OneToMany(mappedBy = "employingBookstore", cascade = CascadeType.ALL)
+    @OrderBy("id ASC")
     @RemoveOnOrphans
     public Set<PropertyBookseller> getEmployees() {
         return employees;
@@ -74,7 +79,9 @@ public class PropertyBookstore {
     }
 
     @ManyToMany
+    @OrderBy("id ASC")
     @RemoveOnOrphans
+    @JsonSerialize(using = JpaIdSerializer.class)
     public Set<PropertyBook> getBooks() {
         return books;
     }

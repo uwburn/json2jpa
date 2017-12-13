@@ -1,5 +1,11 @@
 package it.mgt.json2jpa.test.property.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import it.mgt.json2jpa.JpaIdSerializer;
+import it.mgt.json2jpa.test.view.Skip;
+
 import javax.persistence.*;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -72,6 +78,8 @@ public class PropertyBook {
     }
 
     @ManyToMany
+    @OrderBy("id ASC")
+    @JsonView(Skip.class)
     public Set<PropertyBookstore> getBookstores() {
         return bookstores;
     }

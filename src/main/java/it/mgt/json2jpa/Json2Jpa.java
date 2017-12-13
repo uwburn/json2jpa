@@ -35,6 +35,8 @@ public class Json2Jpa {
     private Set<Class> ignoredClasses = new HashSet<>();
     private Set<Class> allowedClasses = new HashSet<>();
 
+    boolean discardIgnore = false;
+
     Class<?> view;
 
     Set<Object> removedObjects = new HashSet<>();
@@ -120,6 +122,11 @@ public class Json2Jpa {
 
     public Json2Jpa addAllowedClass(Class<?> clazz) {
         this.allowedClasses.add(clazz);
+        return this;
+    }
+
+    public Json2Jpa discardIgnore(boolean value) {
+        this.discardIgnore = value;
         return this;
     }
 
@@ -428,7 +435,7 @@ public class Json2Jpa {
         removedObjects.add(object);
     }
 
-    void flushRemoved() {
+    private void flushRemoved() {
         if (removedObjects.size() > 0)
             em.flush();
     }

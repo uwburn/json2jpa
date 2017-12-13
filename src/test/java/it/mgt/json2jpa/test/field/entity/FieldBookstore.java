@@ -1,5 +1,7 @@
 package it.mgt.json2jpa.test.field.entity;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import it.mgt.json2jpa.JpaIdSerializer;
 import it.mgt.json2jpa.RemoveOnOrphans;
 
 import javax.persistence.*;
@@ -22,10 +24,13 @@ public class FieldBookstore {
     @OneToOne
     private FieldBookseller director;
     @OneToMany(mappedBy = "employingBookstore", cascade = CascadeType.ALL)
+    @OrderBy("id ASC")
     @RemoveOnOrphans
     private Set<FieldBookseller> employees = new LinkedHashSet<>();
     @ManyToMany
+    @OrderBy("id ASC")
     @RemoveOnOrphans
+    @JsonSerialize(using = JpaIdSerializer.class)
     private Set<FieldBook> books = new LinkedHashSet<>();
 
 
