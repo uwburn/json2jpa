@@ -31,10 +31,9 @@ import javax.sql.DataSource;
 
 @SuppressWarnings("SpringJavaAutowiredMembersInspection")
 @Configuration
-@EnableTransactionManagement(mode = AdviceMode.ASPECTJ)
+@EnableTransactionManagement
 @EnableScheduling
 @EnableAsync
-@ImportResource("classpath:spring-aspectj.xml")
 @ComponentScans({
         @ComponentScan("it.mgt.jpa.json2jpa.test.field.component"),
         @ComponentScan("it.mgt.jpa.json2jpa.test.property.component")
@@ -84,7 +83,7 @@ public class SpringContext {
         em.setPackagesToScan("it.mgt.jpa.json2jpa.test.field.entity", "it.mgt.jpa.json2jpa.test.property.entity");
         em.setJpaVendorAdapter(jpaVendorAdapter);
         em.getJpaPropertyMap().put("hibernate.hbm2ddl.auto", "update");
-        em.getJpaPropertyMap().put("hibernate.physical_naming_strategy", "it.mgt.jpa.json2jpa.test.config.ImprovedNamingStrategy");
+        em.getJpaPropertyMap().put("hibernate.physical_naming_strategy", "it.mgt.util.hibernate.ImprovedNamingStrategy");
         em.getJpaPropertyMap().put("hibernate.id.new_generator_mappings", "false");
 
         String dialect = env.getProperty("it.mgt.json2jpa.test.hibernate.dialect");

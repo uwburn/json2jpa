@@ -138,5 +138,40 @@ class JpaUtils {
         }
 
     }
+    
+    static Class<?> getIdClass(Class<?> clazz) {
+        BeanInfo beanInfo;
+        try {
+            beanInfo = Introspector.getBeanInfo(clazz);
+            for (PropertyDescriptor pd : beanInfo.getPropertyDescriptors())
+                if (pd.getReadMethod() != null)
+                    if (pd.getReadMethod().getAnnotation(Id.class) != null)
+                        return pd.getReadMethod().getReturnType();
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Could not retrieve id tpye from getter", e);
+        }
+
+        Field idField = getIdField(clazz);
+        if (idField == null)
+            throw new RuntimeException("No @Id found on getters or fields");
+
+        try {
+            PropertyDescriptor idPropertyDescriptor = getPropertyDescriptor(idField, beanInfo);
+            if (idPropertyDescriptor != null)
+                return idPropertyDescriptor.getReadMethod().getReturnType();
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Could not retrieve id from getter", e);
+        }
+
+        try {
+            return idField.getType();
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Could not retrieve id from field", e);
+        }
+
+    }
 
 }
