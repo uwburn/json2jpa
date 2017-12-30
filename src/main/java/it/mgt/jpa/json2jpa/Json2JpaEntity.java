@@ -102,7 +102,7 @@ class Json2JpaEntity {
             if (e.getValue().id)
                 return e.getValue();
 
-        throw new RuntimeException("Id property not found");
+        throw new Json2JpaException("Id property not found");
     }
 
     Object getId(Object jpaObject) {

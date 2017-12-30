@@ -36,7 +36,7 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
             single = false;
         }
         else if (List.class.isAssignableFrom(bp.getType().getRawClass())) {
-            throw new RuntimeException("Unsupported collection");
+            throw new IllegalArgumentException(bp.getType().getRawClass().getName() + " is not a supported collection");
         }
         else {
             type = bp.getType().getRawClass();
@@ -50,16 +50,23 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
     public Object deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException {
         Object result;
         
-        if (ann != null) {
-            result = findByQuery(parser);
+        try {
+            if (ann != null) {
+                result = findByQuery(parser);
+            }
+            else {
+                result = findByPrimaryKey(parser);
+            }
         }
-        else {
-            Object id = parser.readValueAs(JpaUtils.getIdClass(type));
-            result = findByPrimaryKey(parser);
+        catch (JpaDeserializerException e) {
+            throw e;
+        }
+        catch(Exception e) {
+            throw new JpaDeserializerException(e);
         }
         
         if (single && result == null)
-            throw new RuntimeException("ReferenceError");
+            throw new JpaDeserializerException("Could not deserialize reference entity");
         
         return result;
     }
@@ -79,7 +86,7 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
             params = loadObjectParam(parser);
         }
         else {
-            throw new RuntimeException("Unable to load params");
+            throw new JpaDeserializerException("Unable to load params");
         }
 
         TypedQuery<?> query = em.createNamedQuery(ann.query(), type);
