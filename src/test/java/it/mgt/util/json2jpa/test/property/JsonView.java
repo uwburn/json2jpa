@@ -65,7 +65,8 @@ public class JsonView {
         json.put("ssn", "JSON-VIEW");
 
         Json2Jpa json2Jpa = json2JpaFactory.build();
-        json2Jpa.mergeWithView(wile, json, NoSsn.class);
+        json2Jpa.withView(NoSsn.class);
+        json2Jpa.merge(wile, json);
 
         em.flush();
         em.clear();

@@ -131,6 +131,19 @@ public class Json2Jpa {
         return this;
     }
 
+    public Class<?> getView() {
+        return view;
+    }
+
+    public void setView(Class<?> view) {
+        this.view = view;
+    }
+
+    public Json2Jpa withView(Class<?> view) {
+        this.view = view;
+        return this;
+    }
+
     boolean pushPathIfAllowed(String path) {
         boolean allowed = isPathAllowed(path);
 
@@ -225,11 +238,6 @@ public class Json2Jpa {
         }
     }
 
-    public <T> T constructWithView(Class<T> clazz, JsonNode json, Class<?> view) {
-        this.view = view;
-        return construct(clazz, json);
-    }
-
     public <T> T merge(T jpaObject, JsonNode json) {
         Class<?> clazz = jpaObject.getClass();
         Json2JpaEntity json2JpaEntity = getEntity(clazz);
@@ -249,11 +257,6 @@ public class Json2Jpa {
         catch (Exception e) {
             throw new Json2JpaException(e);
         }
-    }
-
-    public <T> T mergeWithView(T jpaObject, JsonNode json, Class<?> view) {
-        this.view = view;
-        return merge(jpaObject, json);
     }
 
     void merge(Json2JpaEntity json2JpaEntity, Object jpaObject, JsonNode json) {
@@ -316,11 +319,6 @@ public class Json2Jpa {
         catch (Exception e) {
             throw new Json2JpaException(e);
         }
-    }
-
-    public <T> Collection<T> mergeWithView(Collection<T> jpaCollection, Class<T> clazz, JsonNode json, Class<?> view) {
-        this.view = view;
-        return merge(jpaCollection, clazz, json);
     }
 
     private <T> Collection<T> doMergeEntities(Collection<T> jpaCollection, Class<T> clazz, JsonNode json) {
