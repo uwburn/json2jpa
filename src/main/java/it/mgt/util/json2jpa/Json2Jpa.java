@@ -38,9 +38,11 @@ public class Json2Jpa {
 
     boolean discardIgnore = false;
 
-    Class<?> view;
+    private Class<?> view;
 
-    Set<Object> removedObjects = new HashSet<>();
+    private boolean skipTerminalJpaOperation = false;
+
+    private Set<Object> removedObjects = new HashSet<>();
 
     private final Map<Class<?>, Json2JpaEntity> entities = new HashMap<>();
 
@@ -144,6 +146,11 @@ public class Json2Jpa {
         return this;
     }
 
+    public Json2Jpa skipTerminalJpaOperation(boolean value) {
+        this.skipTerminalJpaOperation = value;
+        return this;
+    }
+
     boolean pushPathIfAllowed(String path) {
         boolean allowed = isPathAllowed(path);
 
@@ -226,7 +233,8 @@ public class Json2Jpa {
 
             flushRemoved();
 
-            em.persist(jpaObject);
+            if (!skipTerminalJpaOperation)
+                em.persist(jpaObject);
 
             return jpaObject;
         }
@@ -247,7 +255,8 @@ public class Json2Jpa {
 
             flushRemoved();
 
-            jpaObject = em.merge(jpaObject);
+            if (!skipTerminalJpaOperation)
+                jpaObject = em.merge(jpaObject);
 
             return jpaObject;
         }
@@ -382,10 +391,12 @@ public class Json2Jpa {
                         jn2nEntity.merge(jpaObject, elementUpdate);
 
                         if (updateId == null) {
-                            em.persist(jpaObject);
+                            if (!skipTerminalJpaOperation)
+                                em.persist(jpaObject);
                         }
                         else {
-                            jpaObject = em.merge(jpaObject);
+                            if (!skipTerminalJpaOperation)
+                                jpaObject = em.merge(jpaObject);
                         }
                     }
                     else {
