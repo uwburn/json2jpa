@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import it.mgt.util.jpa.JpaUtils;
 import it.mgt.util.jpa.ParamHint;
 import it.mgt.util.jpa.ParamHints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +26,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 public class JpaDeserializer extends JsonDeserializer<Object> implements ContextualDeserializer {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(JpaDeserializer.class);
 
     @PersistenceContext
     private EntityManager em;
@@ -40,6 +44,7 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
             single = false;
         }
         else if (List.class.isAssignableFrom(bp.getType().getRawClass())) {
+            LOGGER.error(bp.getType().getRawClass().getName() + " is not a supported collection");
             throw new IllegalArgumentException(bp.getType().getRawClass().getName() + " is not a supported collection");
         }
         else {
@@ -66,11 +71,14 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
             throw e;
         }
         catch(Exception e) {
+            LOGGER.warn("Deserialization failed", e);
             throw new JpaDeserializerException(e);
         }
         
-        if (single && result == null)
+        if (single && result == null) {
+            LOGGER.warn("Single non-null result was expected, but null value was resolved");
             throw new JpaDeserializerException("Could not deserialize reference entity");
+        }
         
         return result;
     }
@@ -84,6 +92,7 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
             params = loadObjectParam(parser);
         }
         else {
+            LOGGER.warn("Deserialization by query expects an object containing query parameters");
             throw new JpaDeserializerException("Unable to load params");
         }
 
@@ -135,6 +144,7 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
                 params.put(parser.getCurrentName(), list);
             }
             else if (jsonToken.equals(JsonToken.START_OBJECT)) {
+                LOGGER.debug("Skipping parameter children object");
                 parser.skipChildren();
             }
             else if (jsonToken.equals(JsonToken.END_OBJECT)) {
