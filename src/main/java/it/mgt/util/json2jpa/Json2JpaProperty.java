@@ -269,7 +269,7 @@ class Json2JpaProperty {
             }
 
             if (this.parameterClazz != null && this.rawClazz != null) {
-                JavaType type = j2jEntity.j2j.objectMapper.getTypeFactory().constructParametrizedType(this.rawClazz, this.rawClazz, this.parameterClazz);
+                JavaType type = j2jEntity.j2j.objectMapper.getTypeFactory().constructParametricType(this.rawClazz, this.parameterClazz);
                 this.set(jpaObject, j2jEntity.j2j.objectMapper.readValue(json.traverse(), type));
                 return;
             }
@@ -281,8 +281,30 @@ class Json2JpaProperty {
         }
     }
 
+    private Object buildNewObject(Json2JpaEntity jn2nEntity, Object updateId, JsonNode json) {
+        Object target;
+
+        try {
+            Constructor<?> ctor = jn2nEntity.clazz.getConstructor();
+            target = ctor.newInstance();
+        }
+        catch (Exception e) {
+            throw new Json2JpaException("Cannot build new object", e);
+        }
+
+        this.j2jEntity.j2j.merge(jn2nEntity, target, json);
+
+        if (updateId == null) {
+            j2jEntity.j2j.em.persist(target);
+        } else {
+            target = j2jEntity.j2j.em.merge(target);
+        }
+
+        return target;
+    }
+
     private void mergeToOne(Object jpaObject, JsonNode json) {
-        Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.clazz);
+        Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.clazz, json);
 
         Object updateId = null;
         Object currentTarget = this.get(jpaObject);
@@ -310,26 +332,10 @@ class Json2JpaProperty {
                         target = j2jEntity.j2j.em.find(this.clazz, updateId);
                 }
 
-                if (target == null) {
-                    try {
-                        Constructor<?> ctor = this.clazz.getConstructor();
-                        target = ctor.newInstance();
-                    }
-                    catch (Exception e) {
-                        throw new Json2JpaException("Cannot build new object", e);
-                    }
-
+                if (target == null)
+                    target = buildNewObject(jn2nEntity, updateId, json);
+                else
                     this.j2jEntity.j2j.merge(jn2nEntity, target, json);
-
-                    if (updateId == null) {
-                        j2jEntity.j2j.em.persist(target);
-                    } else {
-                        target = j2jEntity.j2j.em.merge(target);
-                    }
-                }
-                else {
-                    this.j2jEntity.j2j.merge(jn2nEntity, target, json);
-                }
 
                 this.set(jpaObject, target);
                 break;
@@ -370,7 +376,7 @@ class Json2JpaProperty {
 
     @SuppressWarnings("unchecked")
     private void mergeToMany(Object jpaObject, JsonNode json) {
-        Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.parameterClazz);
+        Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.parameterClazz, json);
 
         Object objCollection = this.get(jpaObject);
         if (!(objCollection instanceof Collection)) {
@@ -396,6 +402,8 @@ class Json2JpaProperty {
         while (updateIterator.hasNext()) {
             JsonNode elementUpdate = updateIterator.next();
 
+            Json2JpaEntity elementJn2nEntity = this.j2jEntity.j2j.getEntity(this.parameterClazz, elementUpdate);
+
             Object updateId = null;
             Object currentTarget = null;
             Object target = null;
@@ -403,7 +411,7 @@ class Json2JpaProperty {
                 case POJO:
                 case OBJECT:
                     try {
-                        updateId = j2jEntity.j2j.objectMapper.readValue(elementUpdate.get(jn2nEntity.idProperty.name).traverse(), jn2nEntity.idProperty.clazz);
+                        updateId = j2jEntity.j2j.objectMapper.readValue(elementUpdate.get(elementJn2nEntity.idProperty.name).traverse(), elementJn2nEntity.idProperty.clazz);
                     } catch (NullPointerException ignored) {
                     } catch (IOException e) {
                         throw new Json2JpaException("Unable to read update id", e);
@@ -414,7 +422,7 @@ class Json2JpaProperty {
                         Object currentId = null;
                         if (currentTarget != null) {
                             target = currentTarget;
-                            currentId = jn2nEntity.idProperty.get(target);
+                            currentId = elementJn2nEntity.idProperty.get(target);
                         }
 
                         if (!updateId.equals(currentId))
@@ -423,30 +431,16 @@ class Json2JpaProperty {
                         missingElements.remove(updateId);
                     }
 
-                    if (target == null) {
-                        try {
-                            Constructor<?> ctor = this.parameterClazz.getConstructor();
-                            target = ctor.newInstance();
-                        } catch (Exception e) {
-                            throw new Json2JpaException("Cannot build new object", e);
-                        }
-
-                        this.j2jEntity.j2j.merge(jn2nEntity, target, elementUpdate);
-
-                        if (updateId == null) {
-                            j2jEntity.j2j.em.persist(target);
-                        } else {
-                            target = j2jEntity.j2j.em.merge(target);
-                        }
-                    } else {
-                        this.j2jEntity.j2j.merge(jn2nEntity, target, elementUpdate);
-                    }
+                    if (target == null)
+                        target = buildNewObject(elementJn2nEntity, updateId, elementUpdate);
+                    else
+                        this.j2jEntity.j2j.merge(elementJn2nEntity, target, elementUpdate);
 
                     collection.add(target);
                     break;
                 default:
                     try {
-                        updateId = j2jEntity.j2j.objectMapper.readValue(elementUpdate.traverse(), jn2nEntity.idProperty.clazz);
+                        updateId = j2jEntity.j2j.objectMapper.readValue(elementUpdate.traverse(), elementJn2nEntity.idProperty.clazz);
                     } catch (NullPointerException ignored) {
                     } catch (IOException e) {
                         throw new Json2JpaException("Unable to read update id", e);
@@ -467,7 +461,7 @@ class Json2JpaProperty {
 
             if (type == JpaPropertyType.ONE_TO_MANY) {
                 if (this.mappedBy != null && !"".equals(this.mappedBy)) {
-                    Json2JpaProperty mappedByProperty = jn2nEntity.properties.get(this.mappedBy);
+                    Json2JpaProperty mappedByProperty = elementJn2nEntity.properties.get(this.mappedBy);
                     if (target != null)
                         mappedByProperty.set(target, jpaObject);
                     else
@@ -477,9 +471,9 @@ class Json2JpaProperty {
             else if (type == JpaPropertyType.MANY_TO_MANY) {
                 Json2JpaProperty mappedByProperty;
                 if (this.mappedBy != null && !"".equals(this.mappedBy))
-                    mappedByProperty = jn2nEntity.properties.get(this.mappedBy);
+                    mappedByProperty = elementJn2nEntity.properties.get(this.mappedBy);
                 else
-                    mappedByProperty = jn2nEntity.properties.entrySet()
+                    mappedByProperty = elementJn2nEntity.properties.entrySet()
                             .stream()
                             .map(Map.Entry::getValue)
                             .filter(p -> p.mappedBy != null && this.name.equals(p.mappedBy))

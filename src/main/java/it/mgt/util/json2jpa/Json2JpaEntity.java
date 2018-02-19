@@ -28,10 +28,19 @@ class Json2JpaEntity {
     private JpaAccessType accessType;
     Json2JpaProperty idProperty;
     final Map<String, Json2JpaProperty> properties;
+    final boolean concrete;
 
-    Json2JpaEntity(Class<?> clazz, Json2Jpa j2j) {
+    Json2JpaEntity(Class<?> clazz, JsonNode jsonNode, Json2Jpa j2j) {
         this.j2j = j2j;
-        this.clazz = clazz;
+        Class<?> concreteType = this.j2j.getConcreteType(clazz, jsonNode);
+        if (concreteType != null) {
+            concrete = true;
+            this.clazz = concreteType;
+        }
+        else {
+            concrete = false;
+            this.clazz = clazz;
+        }
 
         Entity entityAnnotation = JpaUtils.getAnnotation(clazz, Entity.class);
         if (entityAnnotation == null)
@@ -117,6 +126,9 @@ class Json2JpaEntity {
 
         if (!this.clazz.isInstance(jpaObject))
             throw new Json2JpaException("Object is not of the expected class");
+
+        if (!this.concrete)
+            throw new Json2JpaException("Cannot merge a non concrete class");
 
         if (json != null) {
             Iterator<Map.Entry<String, JsonNode>> jsonIterator = json.fields();

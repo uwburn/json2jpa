@@ -80,7 +80,7 @@ public class SpringContext {
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
-        em.setPackagesToScan("it.mgt.util.json2jpa.test.field.entity", "it.mgt.util.json2jpa.test.property.entity");
+        em.setPackagesToScan("it.mgt.util.json2jpa.test.field.entity", "it.mgt.util.json2jpa.test.property.entity", "it.mgt.util.json2jpa.test.subtypes.entity");
         em.setJpaVendorAdapter(jpaVendorAdapter);
         em.getJpaPropertyMap().put("hibernate.hbm2ddl.auto", "update");
         em.getJpaPropertyMap().put("hibernate.physical_naming_strategy", "it.mgt.util.hibernate.ImprovedNamingStrategy");
