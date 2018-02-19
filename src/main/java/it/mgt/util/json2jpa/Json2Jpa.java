@@ -1,7 +1,11 @@
 package it.mgt.util.json2jpa;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
+import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import it.mgt.util.jpa.JpaUtils;
@@ -13,6 +17,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -219,16 +224,70 @@ public class Json2Jpa {
                 .anyMatch(v -> v.equals(this.view));
     }
 
-    Json2JpaEntity getEntity(Class<?> clazz) {
-        return entities.computeIfAbsent(clazz, k -> new Json2JpaEntity(clazz, this));
+    Json2JpaEntity getEntity(Class<?> clazz, JsonNode jsonNode) {
+        Class<?> concreteType = getConcreteType(clazz, jsonNode);
+        return entities.computeIfAbsent(concreteType, k -> new Json2JpaEntity(clazz, jsonNode, this));
     }
 
+    @SuppressWarnings("unchecked")
+    <T> Class<T> getConcreteType(Class<T> clazz, JsonNode json) {
+        AnnotatedClass annotatedClazz = AnnotatedClassResolver.resolveWithoutSuperTypes(objectMapper.getDeserializationConfig(), clazz);
+        Collection<NamedType> namedTypes = objectMapper.getSubtypeResolver().collectAndResolveSubtypesByTypeId(objectMapper.getDeserializationConfig(), annotatedClazz);
+
+        Class<T> concreteType = null;
+        if (!Modifier.isInterface(clazz.getModifiers()) && !Modifier.isAbstract(clazz.getModifiers()))
+            concreteType = clazz;
+
+        if (json == null)
+            return concreteType;
+
+        JsonTypeInfo typeInfo = annotatedClazz.getAnnotation(JsonTypeInfo.class);
+        if (typeInfo == null)
+            return concreteType;
+
+        String typeProperty = typeInfo.property();
+        if (typeProperty.equals(""))
+            typeProperty = "@type";
+
+        JsonNode typeNode = json.get(typeProperty);
+        if (typeNode == null)
+            return concreteType;
+
+        String typeName = typeNode.asText();
+
+        concreteType = namedTypes.stream()
+                .filter(nt -> {
+                    if (nt.getName() != null)
+                        return nt.getName().equals(typeName);
+                    else
+                        return nt.getType().getSimpleName().equals(typeName);
+                })
+                .findFirst()
+                .map(nt -> (Class<T>) nt.getType())
+                .orElse(null);
+
+        return concreteType;
+    }
+
+    /*<T> T constructObject(Class<T> clazz, JsonNode json) {
+        try {
+            Class<T> concreteType = getConcreteType(clazz, json);
+            Constructor<T> ctor = concreteType.getConstructor();
+            return ctor.newInstance();
+        }
+        catch (Exception e) {
+            throw new Json2JpaException(e);
+        }
+    }*/
+
+    @SuppressWarnings("unchecked")
     public <T> T construct(Class<T> clazz, JsonNode json) {
         try {
-            Json2JpaEntity json2JpaEntity = getEntity(clazz);
+            Json2JpaEntity json2JpaEntity = getEntity(clazz, json);
 
-            Constructor<T> ctor = clazz.getConstructor();
-            T jpaObject = ctor.newInstance();
+            Constructor<?> ctor = json2JpaEntity.clazz.getConstructor();
+            T jpaObject = (T) ctor.newInstance();
+
             merge(json2JpaEntity, jpaObject, json);
 
             flushRemoved();
@@ -248,7 +307,7 @@ public class Json2Jpa {
 
     public <T> T merge(T jpaObject, JsonNode json) {
         Class<?> clazz = jpaObject.getClass();
-        Json2JpaEntity json2JpaEntity = getEntity(clazz);
+        Json2JpaEntity json2JpaEntity = getEntity(clazz, json);
 
         try {
             merge(json2JpaEntity, jpaObject, json);
@@ -330,8 +389,9 @@ public class Json2Jpa {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private <T> Collection<T> doMergeEntities(Collection<T> jpaCollection, Class<T> clazz, JsonNode json) {
-        Json2JpaEntity jn2nEntity = new Json2JpaEntity(clazz, this);
+        Json2JpaEntity jn2nEntity = getEntity(clazz, null);
 
         Map<Object, T> missingElements = new HashMap<>();
         for (T e : jpaCollection) {
@@ -352,13 +412,15 @@ public class Json2Jpa {
             pathStack.clear();
             JsonNode elementUpdate = updateIterator.next();
 
+            Json2JpaEntity elementJn2nEntity = getEntity(clazz, elementUpdate);
+
             Object updateId = null;
             T jpaObject = null;
             switch (elementUpdate.getNodeType()) {
                 case POJO:
                 case OBJECT:
                     try {
-                        updateId = objectMapper.readValue(elementUpdate.get(jn2nEntity.idProperty.name).traverse(), jn2nEntity.idProperty.clazz);
+                        updateId = objectMapper.readValue(elementUpdate.get(elementJn2nEntity.idProperty.name).traverse(), elementJn2nEntity.idProperty.clazz);
                     }
                     catch (NullPointerException ignored) { }
                     catch (IOException e) {
@@ -369,7 +431,7 @@ public class Json2Jpa {
                         T currentJpaObject = missingElements.get(updateId);
                         Object currentId = null;
                         if (currentJpaObject != null)
-                            currentId = jn2nEntity.getId(currentJpaObject);
+                            currentId = elementJn2nEntity.getId(currentJpaObject);
 
                         if (updateId.equals(currentId))
                             jpaObject = currentJpaObject;
@@ -381,14 +443,14 @@ public class Json2Jpa {
 
                     if (jpaObject == null) {
                         try {
-                            Constructor<T> ctor = clazz.getConstructor();
-                            jpaObject = ctor.newInstance();
+                            Constructor<?> ctor = elementJn2nEntity.clazz.getConstructor();
+                            jpaObject = (T) ctor.newInstance();
                         }
                         catch (Exception e) {
                             throw new Json2JpaException("Cannot build new object", e);
                         }
 
-                        jn2nEntity.merge(jpaObject, elementUpdate);
+                        elementJn2nEntity.merge(jpaObject, elementUpdate);
 
                         if (updateId == null) {
                             if (!skipTerminalJpaOperation)
@@ -400,14 +462,14 @@ public class Json2Jpa {
                         }
                     }
                     else {
-                        jn2nEntity.merge(jpaObject, elementUpdate);
+                        elementJn2nEntity.merge(jpaObject, elementUpdate);
                     }
 
                     mergedJpaObjects.add(jpaObject);
                     break;
                 default:
                     try {
-                        updateId = objectMapper.readValue(elementUpdate.traverse(), jn2nEntity.idProperty.clazz);
+                        updateId = objectMapper.readValue(elementUpdate.traverse(), elementJn2nEntity.idProperty.clazz);
                     }
                     catch (IOException e) {
                         throw new Json2JpaException("Cannot read id value", e);
