@@ -3,6 +3,7 @@ package it.mgt.util.json2jpa;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import it.mgt.util.jpa.JpaUtils;
 
 import java.io.IOException;
@@ -16,6 +17,11 @@ public class JpaIdSerializer extends JsonSerializer<Object> {
             serializeEntityCollection((Collection<?>) o, jsonGenerator, serializerProvider);
         else
             serializeEntity(o, jsonGenerator, serializerProvider);
+    }
+
+    @Override
+    public void serializeWithType(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider, TypeSerializer typeSer) throws IOException {
+        serialize(o, jsonGenerator, serializerProvider);
     }
 
     protected void serializeEntityCollection(Collection<?> collection, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import it.mgt.util.jpa.JpaUtils;
 import it.mgt.util.jpa.ParamHint;
 import it.mgt.util.jpa.ParamHints;
@@ -82,7 +83,12 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
         
         return result;
     }
-    
+
+    @Override
+    public Object deserializeWithType(JsonParser parser, DeserializationContext ctxt, TypeDeserializer typeDeserializer) throws IOException {
+        return deserialize(parser, ctxt);
+    }
+
     private Object findByQuery(JsonParser parser) throws IOException {
         Object result;
         
