@@ -10,7 +10,7 @@
     <name>json2jpa</name>
     <groupId>it.mgt.util</groupId>
     <artifactId>json2jpa</artifactId>
-    <version>1.1.5</version>
+    <version>1.1.6</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,13 +18,12 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <commons-lang.version>2.6</commons-lang.version>
         <slf4j.version>1.7.10</slf4j.version>
-        <spring.version>5.0.2.RELEASE</spring.version>
-        <hibernate.version>5.2.12.Final</hibernate.version>
+        <spring.version>5.0.4.RELEASE</spring.version>
+        <hibernate.version>5.2.14.Final</hibernate.version>
         <jackson.version>2.9.1</jackson.version>
         <junit.version>4.12</junit.version>
-        <hsqldb.version>2.3.3</hsqldb.version>
+        <hsqldb.version>2.4.0</hsqldb.version>
         <c3p0.version>0.9.5.2</c3p0.version>
-        <mysql.version>5.1.38</mysql.version>
     </properties>
     
     <dependencies>
@@ -32,13 +31,13 @@
         <dependency>
             <groupId>it.mgt.util</groupId>
             <artifactId>jpa</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
-        <!-- Java EE -->
+        <!-- Java Inject API -->
         <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
-            <version>7.0</version>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
         </dependency>
         <!-- Apache commons -->
         <dependency>
@@ -73,12 +72,14 @@
         <dependency>
             <groupId>it.mgt.util</groupId>
             <artifactId>hibernate</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.2</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>${slf4j.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.hsqldb</groupId>
@@ -90,12 +91,6 @@
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
             <version>${c3p0.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
