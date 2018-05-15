@@ -37,7 +37,7 @@ public class Json2Jpa {
     private Set<String> allowedPaths = new HashSet<>();
     private final Stack<String> pathStack = new Stack<>();
 
-    private boolean ignoreRootClass = true;
+    private boolean ignoreRootClass = false;
     private Set<Class> ignoredClasses = new HashSet<>();
     private Set<Class> allowedClasses = new HashSet<>();
 
@@ -47,6 +47,7 @@ public class Json2Jpa {
 
     private boolean skipTerminalJpaOperation = false;
 
+    private Set<Object> mergedObjects = new HashSet<>();
     private Set<Object> removedObjects = new HashSet<>();
 
     private final Map<Class<?>, Json2JpaEntity> entities = new HashMap<>();
@@ -333,6 +334,9 @@ public class Json2Jpa {
         if (depth == 0 && ignoreRootClass)
             ignoredClasses.add(clazz);
 
+        if (mergedObjects.contains(jpaObject))
+            return;
+
         if (depth > 0 && !isClassAllowed(clazz))
             return;
 
@@ -346,6 +350,7 @@ public class Json2Jpa {
 
         try {
             json2JpaEntity.merge(jpaObject, json);
+            mergedObjects.add(jpaObject);
 
             --depth;
         }
