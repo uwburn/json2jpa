@@ -293,8 +293,12 @@ public class Json2Jpa {
 
             flushRemoved();
 
-            if (!skipTerminalJpaOperation)
-                em.persist(jpaObject);
+            if (!skipTerminalJpaOperation) {
+                if (json2JpaEntity.getId(jpaObject) != null)
+                    jpaObject = em.merge(jpaObject);
+                else
+                    em.persist(jpaObject);
+            }
 
             return jpaObject;
         }
