@@ -281,7 +281,7 @@ class Json2JpaProperty {
         }
     }
 
-    private Object buildNewObject(Json2JpaEntity jn2nEntity, Object updateId, JsonNode json) {
+    private Object buildNewObject(Json2JpaEntity jn2nEntity, JsonNode json) {
         Object target;
 
         try {
@@ -294,10 +294,28 @@ class Json2JpaProperty {
 
         this.j2jEntity.j2j.merge(jn2nEntity, target, json);
 
+        return target;
+    }
+
+    private Object persistNewObject(Object target, Object updateId) {
         if (updateId == null) {
             j2jEntity.j2j.em.persist(target);
         } else {
             target = j2jEntity.j2j.em.merge(target);
+        }
+
+        return target;
+    }
+
+    private Object mergeTarget(Object jpaObject, JsonNode json, Object target, Object currentTarget, Object updateId, Json2JpaEntity jn2nEntity) {
+        if (target == null) {
+            target = buildNewObject(jn2nEntity, json);
+            mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
+            target = persistNewObject(target, updateId);
+        }
+        else {
+            this.j2jEntity.j2j.merge(jn2nEntity, target, json);
+            mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
         }
 
         return target;
@@ -332,10 +350,7 @@ class Json2JpaProperty {
                         target = j2jEntity.j2j.em.find(this.clazz, updateId);
                 }
 
-                if (target == null)
-                    target = buildNewObject(jn2nEntity, updateId, json);
-                else
-                    this.j2jEntity.j2j.merge(jn2nEntity, target, json);
+                target = mergeTarget(jpaObject, json, target, currentTarget, updateId, jn2nEntity);
 
                 this.set(jpaObject, target);
                 break;
@@ -352,6 +367,8 @@ class Json2JpaProperty {
                     if (currentTarget != null && this.removeOnOrphans)
                         j2jEntity.j2j.remove(currentTarget);
 
+                    mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
+
                     break;
                 }
 
@@ -361,16 +378,10 @@ class Json2JpaProperty {
                     throw new Json2JpaException("Reference error");
 
                 this.set(jpaObject, target);
-                break;
-        }
 
-        if (this.mappedBy != null) {
-            Json2JpaProperty mappedByProperty = jn2nEntity.properties.get(this.mappedBy);
-            if (mappedByProperty != null)
-                if (target != null)
-                    mappedByProperty.set(target, jpaObject);
-                else
-                    mappedByProperty.set(currentTarget, null);
+                mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
+
+                break;
         }
     }
 
@@ -431,10 +442,7 @@ class Json2JpaProperty {
                         missingElements.remove(updateId);
                     }
 
-                    if (target == null)
-                        target = buildNewObject(elementJn2nEntity, updateId, elementUpdate);
-                    else
-                        this.j2jEntity.j2j.merge(elementJn2nEntity, target, elementUpdate);
+                    target = mergeTarget(jpaObject, elementUpdate, target, currentTarget, updateId, elementJn2nEntity);
 
                     collection.add(target);
                     break;
@@ -454,55 +462,11 @@ class Json2JpaProperty {
                     if (target == null)
                         throw new Json2JpaException("Reference error");
 
+                    mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
+
                     collection.add(target);
                     missingElements.remove(updateId);
                     break;
-            }
-
-            if (type == JpaPropertyType.ONE_TO_MANY) {
-                if (this.mappedBy != null && !"".equals(this.mappedBy)) {
-                    Json2JpaProperty mappedByProperty = elementJn2nEntity.properties.get(this.mappedBy);
-                    if (target != null)
-                        mappedByProperty.set(target, jpaObject);
-                    else
-                        mappedByProperty.set(currentTarget, null);
-                }
-            }
-            else if (type == JpaPropertyType.MANY_TO_MANY) {
-                Json2JpaProperty mappedByProperty;
-                if (this.mappedBy != null && !"".equals(this.mappedBy))
-                    mappedByProperty = elementJn2nEntity.properties.get(this.mappedBy);
-                else
-                    mappedByProperty = elementJn2nEntity.properties.entrySet()
-                            .stream()
-                            .map(Map.Entry::getValue)
-                            .filter(p -> p.mappedBy != null && this.name.equals(p.mappedBy))
-                            .findFirst()
-                            .orElse(null);
-
-                if (mappedByProperty != null) {
-                    Object collectionObj = mappedByProperty.get(target);
-                    Collection<Object> mappedCollection;
-                    if (collectionObj != null) {
-                        mappedCollection = (Collection<Object>) collectionObj;
-                    }
-                    else {
-                        Class<?> collectionClazz = JpaUtils.getConcreteCollectionClass(mappedByProperty.clazz);
-                        if (collectionClazz == null)
-                            throw new Json2JpaException("Unknown collection class");
-
-                        try {
-                            Constructor<?> collectionCtor = collectionClazz.getConstructor();
-                            collectionObj = collectionCtor.newInstance();
-                            mappedCollection = (Collection<Object>) collectionObj;
-                        }
-                        catch (Exception e) {
-                            throw new Json2JpaException("Cannot build new collection", e);
-                        }
-                    }
-
-                    mappedCollection.add(jpaObject);
-                }
             }
         }
 
@@ -551,6 +515,59 @@ class Json2JpaProperty {
 
             if (removeOnOrphans)
                 j2jEntity.j2j.remove(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeMappedBy(Object jpaObject, Json2JpaEntity jn2nEntity, Object target, Object currentTarget) {
+        switch (type) {
+            case ONE_TO_ONE:
+            case ONE_TO_MANY: {
+                if (this.mappedBy != null && !"".equals(this.mappedBy)) {
+                    Json2JpaProperty mappedByProperty = jn2nEntity.properties.get(this.mappedBy);
+                    if (mappedByProperty != null)
+                        if (target != null)
+                            mappedByProperty.set(target, jpaObject);
+                        else
+                            mappedByProperty.set(currentTarget, null);
+                }
+            } break;
+            case MANY_TO_MANY: {
+                Json2JpaProperty mappedByProperty;
+                if (this.mappedBy != null && !"".equals(this.mappedBy))
+                    mappedByProperty = jn2nEntity.properties.get(this.mappedBy);
+                else
+                    mappedByProperty = jn2nEntity.properties.entrySet()
+                            .stream()
+                            .map(Map.Entry::getValue)
+                            .filter(p -> p.mappedBy != null && this.name.equals(p.mappedBy))
+                            .findFirst()
+                            .orElse(null);
+
+                if (mappedByProperty != null) {
+                    Object collectionObj = mappedByProperty.get(target);
+                    Collection<Object> mappedCollection;
+                    if (collectionObj != null) {
+                        mappedCollection = (Collection<Object>) collectionObj;
+                    }
+                    else {
+                        Class<?> collectionClazz = JpaUtils.getConcreteCollectionClass(mappedByProperty.clazz);
+                        if (collectionClazz == null)
+                            throw new Json2JpaException("Unknown collection class");
+
+                        try {
+                            Constructor<?> collectionCtor = collectionClazz.getConstructor();
+                            collectionObj = collectionCtor.newInstance();
+                            mappedCollection = (Collection<Object>) collectionObj;
+                        }
+                        catch (Exception e) {
+                            throw new Json2JpaException("Cannot build new collection", e);
+                        }
+                    }
+
+                    mappedCollection.add(jpaObject);
+                }
+            } break;
         }
     }
 
