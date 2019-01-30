@@ -297,11 +297,11 @@ class Json2JpaProperty {
         return target;
     }
 
-    private Object persistNewObject(Object target, Object updateId) {
-        if (updateId == null) {
-            j2jEntity.j2j.em.persist(target);
-        } else {
+    private Object persistNewObject(Json2JpaEntity jn2nEntity, Object target, Object updateId) {
+        if (updateId != null && j2jEntity.j2j.em.find(jn2nEntity.clazz, updateId) != null) {
             target = j2jEntity.j2j.em.merge(target);
+        } else {
+            j2jEntity.j2j.em.persist(target);
         }
 
         return target;
@@ -311,7 +311,7 @@ class Json2JpaProperty {
         if (target == null) {
             target = buildNewObject(jn2nEntity, json);
             mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
-            target = persistNewObject(target, updateId);
+            target = persistNewObject(jn2nEntity, target, updateId);
         }
         else {
             this.j2jEntity.j2j.merge(jn2nEntity, target, json);

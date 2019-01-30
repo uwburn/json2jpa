@@ -294,7 +294,7 @@ public class Json2Jpa {
             flushRemoved();
 
             if (!skipTerminalJpaOperation) {
-                if (json2JpaEntity.getId(jpaObject) != null)
+                if (json2JpaEntity.getId(jpaObject) != null && em.find(clazz, json2JpaEntity.getId(jpaObject)) != null)
                     jpaObject = em.merge(jpaObject);
                 else
                     em.persist(jpaObject);
