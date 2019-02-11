@@ -292,7 +292,7 @@ class Json2JpaProperty {
             throw new Json2JpaException("Cannot build new object", e);
         }
 
-        this.j2jEntity.j2j.merge(jn2nEntity, target, json);
+        this.j2jEntity.j2j.merge(jn2nEntity, target, json, false);
 
         return target;
     }
@@ -314,7 +314,7 @@ class Json2JpaProperty {
             target = persistNewObject(jn2nEntity, target, updateId);
         }
         else {
-            this.j2jEntity.j2j.merge(jn2nEntity, target, json);
+            this.j2jEntity.j2j.merge(jn2nEntity, target, json, true);
             mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
         }
 

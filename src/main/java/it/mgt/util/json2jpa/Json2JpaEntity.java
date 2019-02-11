@@ -120,9 +120,14 @@ class Json2JpaEntity {
     }
 
     @SuppressWarnings("unchecked")
-    void merge(Object jpaObject, JsonNode json) {
+    void merge(Object jpaObject, JsonNode json, boolean tryMergeUnexpectedClass) {
         if (logger.isTraceEnabled())
             logger.trace("Merging " + this);
+
+        if (tryMergeUnexpectedClass) {
+            if (!this.clazz.isInstance(jpaObject))
+                jpaObject = this.j2j.em.merge(jpaObject);
+        }
 
         if (!this.clazz.isInstance(jpaObject))
             throw new Json2JpaException("Object is not of the expected class");

@@ -289,7 +289,7 @@ public class Json2Jpa {
             Constructor<?> ctor = json2JpaEntity.clazz.getConstructor();
             T jpaObject = (T) ctor.newInstance();
 
-            merge(json2JpaEntity, jpaObject, json);
+            merge(json2JpaEntity, jpaObject, json, false);
 
             flushRemoved();
 
@@ -311,11 +311,15 @@ public class Json2Jpa {
     }
 
     public <T> T merge(T jpaObject, JsonNode json) {
+        return merge(jpaObject, json, false);
+    }
+
+    public <T> T merge(T jpaObject, JsonNode json, boolean tryMergeUnexpectedClass) {
         Class<?> clazz = jpaObject.getClass();
         Json2JpaEntity json2JpaEntity = getEntity(clazz, json);
 
         try {
-            merge(json2JpaEntity, jpaObject, json);
+            merge(json2JpaEntity, jpaObject, json, tryMergeUnexpectedClass);
 
             flushRemoved();
 
@@ -332,7 +336,7 @@ public class Json2Jpa {
         }
     }
 
-    void merge(Json2JpaEntity json2JpaEntity, Object jpaObject, JsonNode json) {
+    void merge(Json2JpaEntity json2JpaEntity, Object jpaObject, JsonNode json, boolean tryMergeUnexpectedClass) {
         Class<?> clazz = jpaObject.getClass();
 
         if (depth == 0 && ignoreRootClass)
@@ -353,7 +357,7 @@ public class Json2Jpa {
         ++depth;
 
         try {
-            json2JpaEntity.merge(jpaObject, json);
+            json2JpaEntity.merge(jpaObject, json, tryMergeUnexpectedClass);
             mergedObjects.add(jpaObject);
 
             --depth;
@@ -376,7 +380,7 @@ public class Json2Jpa {
             Constructor<?> collectionCtor = collectionClazz.getConstructor();
             Object collectionObj = collectionCtor.newInstance();
             Collection<T> collection = (Collection<T>) collectionObj;
-            return doMergeEntities(collection, clazz, json);
+            return doMergeEntities(collection, clazz, json, false);
         }
         catch (Json2JpaException e) {
             throw e;
@@ -387,8 +391,12 @@ public class Json2Jpa {
     }
 
     public <T> Collection<T> merge(Collection<T> jpaCollection, Class<T> clazz, JsonNode json) {
+        return merge(jpaCollection, clazz, json, false);
+    }
+
+    public <T> Collection<T> merge(Collection<T> jpaCollection, Class<T> clazz, JsonNode json, boolean tryMergeUnexpectedClass) {
         try {
-            return doMergeEntities(jpaCollection, clazz, json);
+            return doMergeEntities(jpaCollection, clazz, json, tryMergeUnexpectedClass);
         }
         catch (Json2JpaException e) {
             throw e;
@@ -399,7 +407,7 @@ public class Json2Jpa {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> Collection<T> doMergeEntities(Collection<T> jpaCollection, Class<T> clazz, JsonNode json) {
+    private <T> Collection<T> doMergeEntities(Collection<T> jpaCollection, Class<T> clazz, JsonNode json, boolean tryMergeUnexpectedClass) {
         Json2JpaEntity jn2nEntity = getEntity(clazz, null);
 
         Map<Object, T> missingElements = new HashMap<>();
@@ -459,7 +467,7 @@ public class Json2Jpa {
                             throw new Json2JpaException("Cannot build new object", e);
                         }
 
-                        elementJn2nEntity.merge(jpaObject, elementUpdate);
+                        elementJn2nEntity.merge(jpaObject, elementUpdate, tryMergeUnexpectedClass);
 
                         if (updateId == null) {
                             if (!skipTerminalJpaOperation)
@@ -471,7 +479,7 @@ public class Json2Jpa {
                         }
                     }
                     else {
-                        elementJn2nEntity.merge(jpaObject, elementUpdate);
+                        elementJn2nEntity.merge(jpaObject, elementUpdate, tryMergeUnexpectedClass);
                     }
 
                     mergedJpaObjects.add(jpaObject);
