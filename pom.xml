@@ -10,7 +10,7 @@
     <name>json2jpa</name>
     <groupId>it.mgt.util</groupId>
     <artifactId>json2jpa</artifactId>
-    <version>1.1.15</version>
+    <version>1.1.16</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
