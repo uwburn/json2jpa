@@ -387,7 +387,7 @@ class Json2JpaProperty {
 
     @SuppressWarnings("unchecked")
     private void mergeToMany(Object jpaObject, JsonNode json) {
-        Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.parameterClazz, json, true);
+        Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.parameterClazz, json);
 
         Object objCollection = this.get(jpaObject);
         if (!(objCollection instanceof Collection)) {

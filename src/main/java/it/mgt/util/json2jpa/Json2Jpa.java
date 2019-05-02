@@ -225,20 +225,12 @@ public class Json2Jpa {
                 .anyMatch(v -> v.equals(this.view));
     }
 
-    Json2JpaEntity getEntity(Class<?> clazz, JsonNode jsonNode, boolean allowAbstractType) {
+    Json2JpaEntity getEntity(Class<?> clazz, JsonNode jsonNode) {
         Class<?> resolvedType = getConcreteType(clazz, jsonNode);
-        if (resolvedType == null) {
-             if(allowAbstractType)
-                 resolvedType = clazz;
-            else
-                throw new Json2JpaException("Unable to resolve concrete type");
-        }
+        if (resolvedType == null)
+            resolvedType = clazz;
 
         return entities.computeIfAbsent(resolvedType, k -> new Json2JpaEntity(clazz, jsonNode, this));
-    }
-
-    Json2JpaEntity getEntity(Class<?> clazz, JsonNode jsonNode) {
-        return this.getEntity(clazz, jsonNode, false);
     }
 
     @SuppressWarnings("unchecked")
@@ -419,7 +411,7 @@ public class Json2Jpa {
 
     @SuppressWarnings("unchecked")
     private <T> Collection<T> doMergeEntities(Collection<T> jpaCollection, Class<T> clazz, JsonNode json, boolean tryMergeUnexpectedClass) {
-        Json2JpaEntity jn2nEntity = getEntity(clazz, null, true);
+        Json2JpaEntity jn2nEntity = getEntity(clazz, null);
 
         Map<Object, T> missingElements = new HashMap<>();
         for (T e : jpaCollection) {
