@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import it.mgt.util.jpa.JpaUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +18,7 @@ import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 class Json2JpaProperty {
 
@@ -215,6 +217,15 @@ class Json2JpaProperty {
         }
     }
 
+    static Collection<?> copyCollection(Collection<?> collection) {
+        if (Set.class.isAssignableFrom(collection.getClass()))
+            return new LinkedHashSet<>(collection);
+        else if (List.class.isAssignableFrom(collection.getClass()))
+            return new ArrayList<>(collection);
+        else
+            throw new Json2JpaException("Unable to copy collection of type " + collection.getClass());
+    }
+
     void merge(Object jpaObject, JsonNode json) {
         if (!j2jEntity.j2j.isClassAllowed(this.clazz))
             return;
@@ -222,6 +233,14 @@ class Json2JpaProperty {
         if (logger.isTraceEnabled())
             logger.trace("Merging " + this);
 
+        List<Map.Entry<String, ChangedHandler<?>>> changedHandlers = this.j2jEntity.j2j.changedHandlers.entrySet()
+                .stream()
+                .filter(e -> GlobMatcher.match(e.getKey(), this.j2jEntity.j2j.getPath()))
+                .collect(Collectors.toList());
+
+        Object oldValue = this.get(jpaObject);
+
+        boolean collectionChanged = false;
         switch (this.type) {
             case BASIC:
                 mergeBasic(jpaObject, json);
@@ -232,8 +251,25 @@ class Json2JpaProperty {
                 break;
             case MANY_TO_MANY:
             case ONE_TO_MANY:
-                mergeToMany(jpaObject, json);
+                if (changedHandlers.size() > 0)
+                    oldValue = copyCollection((Collection<?>) oldValue);
+                collectionChanged = mergeToMany(jpaObject, json);
                 break;
+        }
+
+        Object fOldValue = oldValue;
+        Object newValue = this.get(jpaObject);
+        if ((fOldValue == null && newValue != null)
+                || (fOldValue != null && newValue == null)
+                || !fOldValue.equals(newValue)) {
+            changedHandlers.forEach(e -> this.j2jEntity.j2j.detectedChanges.add(
+                    new DetectedChanges(fOldValue, newValue, e.getValue())
+            ));
+        }
+        else if (collectionChanged) {
+            changedHandlers.forEach(e -> this.j2jEntity.j2j.detectedChanges.add(
+                    new DetectedChanges(fOldValue, newValue, e.getValue())
+            ));
         }
     }
 
@@ -386,7 +422,9 @@ class Json2JpaProperty {
     }
 
     @SuppressWarnings("unchecked")
-    private void mergeToMany(Object jpaObject, JsonNode json) {
+    private boolean mergeToMany(Object jpaObject, JsonNode json) {
+        boolean changed = false;
+
         Json2JpaEntity jn2nEntity = this.j2jEntity.j2j.getEntity(this.parameterClazz, json);
 
         Object objCollection = this.get(jpaObject);
@@ -444,7 +482,7 @@ class Json2JpaProperty {
 
                     target = mergeTarget(jpaObject, elementUpdate, target, currentTarget, updateId, elementJn2nEntity);
 
-                    collection.add(target);
+                    changed = collection.add(target) || changed;
                     break;
                 default:
                     try {
@@ -464,11 +502,13 @@ class Json2JpaProperty {
 
                     mergeMappedBy(jpaObject, jn2nEntity, target, currentTarget);
 
-                    collection.add(target);
+                    changed = collection.add(target) || changed;
                     missingElements.remove(updateId);
                     break;
             }
         }
+
+        changed = missingElements.size() > 0 || changed;
 
         for (Object e : missingElements.values()) {
             collection.remove(e);
@@ -516,6 +556,8 @@ class Json2JpaProperty {
             if (removeOnOrphans)
                 j2jEntity.j2j.remove(e);
         }
+
+        return changed;
     }
 
     @SuppressWarnings("unchecked")

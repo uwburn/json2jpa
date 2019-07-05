@@ -43,6 +43,9 @@ public class Json2Jpa {
 
     boolean discardIgnore = false;
 
+    Map<String, ChangedHandler<?>> changedHandlers = new HashMap<>();
+    Set<DetectedChanges> detectedChanges = new HashSet<>();
+
     private Class<?> view;
 
     private boolean skipTerminalJpaOperation = false;
@@ -152,6 +155,21 @@ public class Json2Jpa {
         return this;
     }
 
+    public Map<String, ChangedHandler<?>> getChangedHandlers() {
+        return changedHandlers;
+    }
+
+    public Json2Jpa setChangedHandlers(Map<String, ChangedHandler<?>> changedHandlers) {
+        this.changedHandlers = changedHandlers;
+        return this;
+    }
+
+    public Json2Jpa onChanged(String path, ChangedHandler<?> handler) {
+        this.changedHandlers.put(path, handler);
+
+        return this;
+    }
+
     public Json2Jpa skipTerminalJpaOperation(boolean value) {
         this.skipTerminalJpaOperation = value;
         return this;
@@ -173,8 +191,12 @@ public class Json2Jpa {
         pathStack.pop();
     }
 
+    String getPath() {
+        return StringUtils.join(pathStack, '/');
+    }
+
     private boolean isPathAllowed(String path) {
-        String jsonPath = StringUtils.join(pathStack, '/');
+        String jsonPath = getPath();
         if (path != null)
             if (jsonPath.length() > 0)
                 jsonPath += '/' + path;
@@ -284,6 +306,10 @@ public class Json2Jpa {
         }
     }*/
 
+    void invokeChangedHandlers() {
+        detectedChanges.forEach(DetectedChanges::invoke);
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T construct(Class<T> clazz, JsonNode json) {
         try {
@@ -302,6 +328,8 @@ public class Json2Jpa {
                 else
                     em.persist(jpaObject);
             }
+
+            invokeChangedHandlers();
 
             return jpaObject;
         }
@@ -328,6 +356,8 @@ public class Json2Jpa {
 
             if (!skipTerminalJpaOperation)
                 jpaObject = em.merge(jpaObject);
+
+            invokeChangedHandlers();
 
             return jpaObject;
         }
@@ -480,6 +510,8 @@ public class Json2Jpa {
                             if (!skipTerminalJpaOperation)
                                 jpaObject = em.merge(jpaObject);
                         }
+
+                        invokeChangedHandlers();
                     }
                     else {
                         elementJn2nEntity.merge(jpaObject, elementUpdate, tryMergeUnexpectedClass);
