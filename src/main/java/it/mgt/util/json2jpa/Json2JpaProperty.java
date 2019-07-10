@@ -261,7 +261,7 @@ class Json2JpaProperty {
         Object newValue = this.get(jpaObject);
         if ((fOldValue == null && newValue != null)
                 || (fOldValue != null && newValue == null)
-                || !fOldValue.equals(newValue)) {
+                || (fOldValue != null && !fOldValue.equals(newValue))) {
             changedHandlers.forEach(e -> this.j2jEntity.j2j.detectedChanges.add(
                     new DetectedChanges(fOldValue, newValue, e.getValue())
             ));
