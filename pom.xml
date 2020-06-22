@@ -10,7 +10,7 @@
     <name>json2jpa</name>
     <groupId>it.mgt.util</groupId>
     <artifactId>json2jpa</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>it.mgt.util</groupId>
             <artifactId>jpa</artifactId>
-            <version>1.0.3</version>
+            <version>1.0.4</version>
         </dependency>
         <!-- Java Inject API -->
         <dependency>
