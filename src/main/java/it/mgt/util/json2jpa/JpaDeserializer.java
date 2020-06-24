@@ -1,7 +1,5 @@
 package it.mgt.util.json2jpa;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -16,15 +14,11 @@ import it.mgt.util.jpa.ParamHints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
+import java.io.IOException;
+import java.util.*;
 
 public class JpaDeserializer extends JsonDeserializer<Object> implements ContextualDeserializer {
 
@@ -44,7 +38,7 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
             type = bp.getType().getContentType().getRawClass();
             single = false;
         }
-        else if (List.class.isAssignableFrom(bp.getType().getRawClass())) {
+        else if (Collection.class.isAssignableFrom(bp.getType().getRawClass())) {
             LOGGER.error(bp.getType().getRawClass().getName() + " is not a supported collection");
             throw new IllegalArgumentException(bp.getType().getRawClass().getName() + " is not a supported collection");
         }
@@ -162,8 +156,26 @@ public class JpaDeserializer extends JsonDeserializer<Object> implements Context
     }
     
     private Object findByPrimaryKey(JsonParser parser) throws IOException {
-        Object id = parser.readValueAs(JpaUtils.getIdClass(type));
-        return em.find(type, id);
+        if (single) {
+            Object id = parser.readValueAs(JpaUtils.getIdClass(type));
+            return em.find(type, id);
+        }
+        else {
+            List<Object> list = new ArrayList<>();
+
+            JsonToken jsonToken = parser.currentToken();
+            if (!jsonToken.equals(JsonToken.START_ARRAY)) {
+                LOGGER.warn("Expected an array to be deserialized as a list");
+                throw new JpaDeserializerException("Expected an array to be deserialized as a list");
+            }
+
+            for (jsonToken = parser.nextToken(); !jsonToken.equals(JsonToken.END_ARRAY); jsonToken = parser.nextToken()) {
+                Object id = parser.readValueAs(JpaUtils.getIdClass(type));
+                list.add(em.find(type, id));
+            }
+
+            return list;
+        }
     }
 
 }
