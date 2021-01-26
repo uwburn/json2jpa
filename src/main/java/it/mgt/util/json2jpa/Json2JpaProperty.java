@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import it.mgt.util.jpa.JpaUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,7 +164,7 @@ class Json2JpaProperty {
         VisibilityChecker<?> vc = j2jEntity.j2j.objectMapper.getVisibilityChecker();
 
         JsonIgnoreProperties ignoreProperties = JpaUtils.getAnnotation(this.j2jEntity.clazz, JsonIgnoreProperties.class);
-        if (ignoreProperties != null && Arrays.stream(ignoreProperties.value()).anyMatch(this.name::equals))
+        if (ignoreProperties != null && Arrays.asList(ignoreProperties.value()).contains(this.name))
                 ignore = true;
 
         if (this.field != null && vc.isFieldVisible(this.field)) {
@@ -434,7 +433,7 @@ class Json2JpaProperty {
                 error += " (Have you initialized the collection field in " + this.j2jEntity.clazz + "?)";
             throw new Json2JpaException(error);
         }
-        Collection<Object> collection = (Collection) objCollection;
+        Collection<Object> collection = (Collection<Object>) objCollection;
 
         if (json.getNodeType() == JsonNodeType.NULL)
             json = new ArrayNode(j2jEntity.j2j.objectMapper.getNodeFactory());
@@ -523,10 +522,9 @@ class Json2JpaProperty {
                     }
                 }
                 else {
-                    Json2JpaProperty mappedByProperty = jn2nEntity.properties.entrySet()
+                    Json2JpaProperty mappedByProperty = jn2nEntity.properties.values()
                             .stream()
-                            .map(Map.Entry::getValue)
-                            .filter(p -> p.mappedBy != null && this.name.equals(p.mappedBy))
+                            .filter(p -> this.name.equals(p.mappedBy))
                             .findFirst()
                             .orElse(null);
 
@@ -579,10 +577,9 @@ class Json2JpaProperty {
                 if (this.mappedBy != null && !"".equals(this.mappedBy))
                     mappedByProperty = jn2nEntity.properties.get(this.mappedBy);
                 else
-                    mappedByProperty = jn2nEntity.properties.entrySet()
+                    mappedByProperty = jn2nEntity.properties.values()
                             .stream()
-                            .map(Map.Entry::getValue)
-                            .filter(p -> p.mappedBy != null && this.name.equals(p.mappedBy))
+                            .filter(p -> this.name.equals(p.mappedBy) && p.parameterClazz.isAssignableFrom(this.j2jEntity.clazz))
                             .findFirst()
                             .orElse(null);
 
