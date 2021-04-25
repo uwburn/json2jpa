@@ -25,6 +25,13 @@
         <hsqldb.version>2.4.0</hsqldb.version>
         <c3p0.version>0.9.5.4</c3p0.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>github-public</id>
+            <url>https://public:&#103;hp_9Bky7GjDTQGBMosnNryqlWmpacXg1O1HubsL@maven.pkg.github.com/uwburn/*</url>
+        </repository>
+    </repositories>
     
     <dependencies>
         <!-- Michele -->
