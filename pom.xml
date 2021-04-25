@@ -10,7 +10,7 @@
     <name>json2jpa</name>
     <groupId>it.mgt.util</groupId>
     <artifactId>json2jpa</artifactId>
-    <version>1.2.5</version>
+    <version>1.2.6</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -72,7 +72,7 @@
         <dependency>
             <groupId>it.mgt.util</groupId>
             <artifactId>hibernate</artifactId>
-            <version>1.1.2</version>
+            <version>1.2.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -124,6 +124,14 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/uwburn/json2jpa</url>
+        </repository>
+    </distributionManagement>
     
     <build>
         <finalName>${project.name}-${project.version}</finalName>
