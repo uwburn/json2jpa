@@ -1,5 +1,6 @@
 package it.mgt.util.json2jpa;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.JsonNode;
 import it.mgt.util.jpa.JpaUtils;
 import org.slf4j.Logger;
@@ -14,9 +15,11 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 class Json2JpaEntity {
 
@@ -29,6 +32,7 @@ class Json2JpaEntity {
     Json2JpaProperty idProperty;
     final Map<String, Json2JpaProperty> properties;
     final boolean concrete;
+    private JsonPropertyOrder orderAnnotation;
 
     Json2JpaEntity(Class<?> clazz, JsonNode jsonNode, Json2Jpa j2j) {
         this.j2j = j2j;
@@ -50,6 +54,8 @@ class Json2JpaEntity {
             this.beanInfo = Introspector.getBeanInfo(this.clazz);
         }
         catch (Exception ignored) { }
+
+        orderAnnotation = JpaUtils.getAnnotation(clazz, JsonPropertyOrder.class);
 
         this.accessType = this.getAccessType();
 
@@ -119,7 +125,51 @@ class Json2JpaEntity {
         return idProperty.get(jpaObject);
     }
 
-    @SuppressWarnings("unchecked")
+    private static int indexOf(String[] arr, String str) {
+        for (int i = 0; i < arr.length; i++) {
+            if(arr[i].equals(str)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private Stream<Json2JpaFieldProperty> getSortedFiledProperties(JsonNode json) {
+        Iterable<Map.Entry<String, JsonNode>> iterable = json::fields;
+
+        return StreamSupport.stream(iterable.spliterator(), false)
+                .map(e -> {
+                    Json2JpaProperty property = this.properties.get(e.getKey());
+                    if (property == null)
+                        return null;
+
+                    int index = -1;
+                    if (this.orderAnnotation != null) {
+                        index = indexOf(this.orderAnnotation.value(), e.getKey());
+                    }
+
+                    return new Json2JpaFieldProperty(property, e.getValue(), index);
+                })
+                .filter(Objects::nonNull)
+                .sorted((o1, o2) -> {
+                    if (o1.index >= 0 && o2.index >= 0) {
+                        return o1.index - o2.index;
+                    }
+                    else if (o1.index >= 0) {
+                        return -1;
+                    }
+                    else if (o2.index >= 0) {
+                        return 1;
+                    }
+                    else if (this.orderAnnotation != null && this.orderAnnotation.alphabetic()) {
+                        return o1.property.name.compareTo(o2.property.name);
+                    }
+                    else {
+                        return 0;
+                    }
+                });
+    }
+
     void merge(Object jpaObject, JsonNode json, boolean tryMergeUnexpectedClass) {
         if (logger.isTraceEnabled())
             logger.trace("Merging " + this);
@@ -136,22 +186,16 @@ class Json2JpaEntity {
             throw new Json2JpaException("Cannot merge a non concrete class");
 
         if (json != null) {
-            Iterator<Map.Entry<String, JsonNode>> jsonIterator = json.fields();
-            while (jsonIterator.hasNext()) {
-                Map.Entry<String, JsonNode> jsonField = jsonIterator.next();
-
-                Json2JpaProperty property = this.properties.get(jsonField.getKey());
-                if (property == null)
-                    continue;
-
-                if (this.j2j.pushPathIfAllowed(property.name)) {
-                    if (this.j2j.matchesViews(property.views))
-                        if (!property.ignore || this.j2j.discardIgnore)
-                            property.merge(jpaObject, jsonField.getValue());
+            final Object finalJpaObject = jpaObject;
+            getSortedFiledProperties(json).forEach(fp -> {
+                if (this.j2j.pushPathIfAllowed(fp.property.name)) {
+                    if (this.j2j.matchesViews(fp.property.views))
+                        if (!fp.property.ignore || this.j2j.discardIgnore)
+                            fp.property.merge(finalJpaObject, fp.jsonNode);
 
                     this.j2j.popPath();
                 }
-            }
+            });
         }
     }
 
