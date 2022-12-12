@@ -10,7 +10,7 @@
     <name>json2jpa</name>
     <groupId>it.mgt.util</groupId>
     <artifactId>json2jpa</artifactId>
-    <version>1.2.7</version>
+    <version>1.2.8</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -20,7 +20,7 @@
         <slf4j.version>1.7.10</slf4j.version>
         <spring.version>5.2.6.RELEASE</spring.version>
         <hibernate.version>5.4.24.Final</hibernate.version>
-        <jackson.version>2.13.4.1</jackson.version>
+        <jackson.version>2.14.1</jackson.version>
         <junit.version>4.13.1</junit.version>
         <hsqldb.version>2.4.0</hsqldb.version>
         <c3p0.version>0.9.5.4</c3p0.version>
@@ -28,16 +28,16 @@
 
     <repositories>
         <repository>
-            <id>uwburn-public</id>
-            <url>https://public:&#103;hp_USiLfE56hyJwBouilQKlVd78RViQxq3eXDiW@maven.pkg.github.com/uwburn/*</url>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
     
     <dependencies>
         <!-- Michele -->
         <dependency>
-            <groupId>it.mgt.util</groupId>
-            <artifactId>jpa</artifactId>
+            <groupId>com.github.uwburn</groupId>
+            <artifactId>jpa-util</artifactId>
             <version>1.0.4</version>
         </dependency>
         <!-- Java Inject API -->
@@ -77,8 +77,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>it.mgt.util</groupId>
-            <artifactId>hibernate</artifactId>
+            <groupId>com.github.uwburn</groupId>
+            <artifactId>hibernate-util</artifactId>
             <version>1.2.0</version>
             <scope>test</scope>
         </dependency>
