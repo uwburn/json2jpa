@@ -26,18 +26,22 @@
         <c3p0.version>0.9.5.4</c3p0.version>
     </properties>
 
-    <repositories>
+    <distributionManagement>
         <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
+            <id>gitlab-maven</id>
+            <url>${CI_API_V4_URL}/projects/${env.CI_PROJECT_ID}/packages/maven</url>
         </repository>
-    </repositories>
+        <snapshotRepository>
+            <id>gitlab-maven</id>
+            <url>${CI_API_V4_URL}/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+        </snapshotRepository>
+    </distributionManagement>
     
     <dependencies>
         <!-- Michele -->
         <dependency>
-            <groupId>com.github.uwburn</groupId>
-            <artifactId>jpa-util</artifactId>
+            <groupId>it.mgt.util</groupId>
+            <artifactId>jpa</artifactId>
             <version>1.0.4</version>
         </dependency>
         <!-- Java Inject API -->
@@ -77,8 +81,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.uwburn</groupId>
-            <artifactId>hibernate-util</artifactId>
+            <groupId>it.mgt.util</groupId>
+            <artifactId>hibernate</artifactId>
             <version>1.2.0</version>
             <scope>test</scope>
         </dependency>
@@ -132,14 +136,6 @@
         </dependency>
     </dependencies>
 
-    <distributionManagement>
-        <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/uwburn/json2jpa</url>
-        </repository>
-    </distributionManagement>
-    
     <build>
         <finalName>${project.name}-${project.version}</finalName>
         <plugins>
